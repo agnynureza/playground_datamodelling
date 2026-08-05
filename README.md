@@ -30,6 +30,11 @@ Before first run:
 2. Run `Scripts/CreateTenantsTable.sql` against that database manually
 3. example to add library: dotnet add package Microsoft.AspNetCore.Identity
 
+Audit logging:
+1. Run `Database/Schema/CreateLoggingTable.sql` against the same database
+2. Every API request is captured in `P_Logs` with tenant id, username, request body, response body, status code, and duration
+3. Sensitive fields are redacted and large bodies are truncated before storage
+
 ## Endpoints
 
 ### POST /api/tenants — create a tenant
