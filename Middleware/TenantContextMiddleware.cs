@@ -1,5 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using TenantService.Api.Common;
 
 namespace TenantService.Api.Middleware;
 
@@ -19,7 +19,7 @@ public sealed class TenantContextMiddleware
 
     public async Task Invoke(HttpContext context)
     {
-        if (GetTenantIdFromBearerToken(context, out var tenantId))
+        if (GetTenantIdFromClaims(context.User, out var tenantId))
         {
             context.Items[TenantContextItems.TenantId] = tenantId;
         }
@@ -33,29 +33,16 @@ public sealed class TenantContextMiddleware
         await _next(context);
     }
 
-    private static bool GetTenantIdFromBearerToken(HttpContext context, out Guid tenantId)
+    private static bool GetTenantIdFromClaims(ClaimsPrincipal principal, out Guid tenantId)
     {
         tenantId = Guid.Empty;
 
-        if (!HasBearerToken(context))
+        var tenantIdValue = principal.GetTenantId();
+        if (tenantIdValue is null || tenantIdValue == Guid.Empty)
             return false;
 
-        var authorizationHeader = context.Request.Headers.Authorization.ToString();
-        var token = authorizationHeader["Bearer ".Length..].Trim();
-
-        if (string.IsNullOrWhiteSpace(token))
-            return false;
-
-        try
-        {
-            var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
-            var tenantIdValue = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "tenantId")?.Value;
-            return Guid.TryParse(tenantIdValue, out tenantId);
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+        tenantId = tenantIdValue.Value;
+        return true;
     }
 
     private static bool HasBearerToken(HttpContext context)

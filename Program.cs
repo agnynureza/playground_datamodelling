@@ -5,6 +5,7 @@ using TenantService.Api.Configuration;
 using TenantService.Api.Entities;
 using TenantService.Api.Middleware;
 using TenantService.Api.Repositories;
+using TenantService.Api.Services.RequestAudit;
 using Svc = TenantService.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,13 +17,16 @@ var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
 
 // repository = logic layer to interact with the database 
 builder.Services.AddScoped<ITenantRepository, TenantRepository>();
+builder.Services.AddSingleton<IRequestAuditRepository, RequestAuditRepository>();
 
 // service = business logic layer
 builder.Services.AddScoped<Svc.Tenant.ITenantService, Svc.Tenant.TenantService>();
 builder.Services.AddScoped<Svc.Authenticate.IAuthService, Svc.Authenticate.AuthService>();
 builder.Services.AddScoped<Svc.Jwt.IJwtService, Svc.Jwt.JwtService>();
+builder.Services.AddSingleton<IRequestAuditQueue, RequestAuditQueue>();
+builder.Services.AddHostedService<RequestAuditBackgroundService>();
 
-// init JWT
+// Set up JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -53,6 +57,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<TenantContextMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
