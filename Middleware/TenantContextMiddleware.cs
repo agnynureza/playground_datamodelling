@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using TenantService.Api.Common;
+using TenantService.Api.Services.Tenant;
+using TenantService.Api.Models;
 
 namespace TenantService.Api.Middleware;
 
@@ -11,10 +13,12 @@ public static class TenantContextItems
 public sealed class TenantContextMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ITenantLimitService _limit;
 
-    public TenantContextMiddleware(RequestDelegate next)
+    public TenantContextMiddleware(RequestDelegate next, ITenantLimitService limit)
     {
         _next = next;
+        _limit = limit;
     }
 
     public async Task Invoke(HttpContext context)
@@ -22,6 +26,9 @@ public sealed class TenantContextMiddleware
         if (GetTenantIdFromClaims(context.User, out var tenantId))
         {
             context.Items[TenantContextItems.TenantId] = tenantId;
+
+            var tenantLimit = await _limit.GetLimit(tenantId, context.RequestAborted);
+            context.Items["TenantLimit"] = tenantLimit;
         }
         else if (HasBearerToken(context))
         {

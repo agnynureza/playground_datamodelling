@@ -35,6 +35,11 @@ Audit logging:
 2. Every API request is captured in `P_Logs` with tenant id, username, request body, response body, status code, and duration
 3. Sensitive fields are redacted and large bodies are truncated before storage
 
+Rate limiting:
+1. Tenant identity comes from the JWT `tenantId` claim
+2. Tenant-specific limits come from `TenantLimits` and are cached in application memory
+3. Requests are throttled per tenant with a fixed-window limiter; public endpoints fall back to the anonymous/IP path
+
 ## Endpoints
 
 ### POST /api/tenants — create a tenant
